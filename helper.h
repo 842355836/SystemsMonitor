@@ -26,7 +26,12 @@ public:
 
     static bool getCpuInfo(QVector<QString> &cpuInfo);
     static bool getMemInfo(QVector<QString> &memInfo);
-    static bool getCpuTime(long long int &total_time);
+
+    static bool getInfoByPid(QString pid,QStringList &pidInfo);
+
+    static bool getCpuTime(long int &total_time, long int &idleTime);
+
+    static bool getMemUsage(long int &memTotal,long int &memFree,long int &swapTotal, long int &swapFree);
 };
 
 #endif // HELPER_H

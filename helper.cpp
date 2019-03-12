@@ -17,18 +17,84 @@ Helper::Helper()
     return;
 }
 
-bool Helper::getCpuTime(long long int &total_time)
+bool Helper::getInfoByPid(QString pid,QStringList &pidInfo)
+{
+    QString fileName="/proc/"+pid+"/stat";
+    QFile file(fileName);
+
+    if(!file.open(QIODevice::ReadOnly)){
+        qDebug()<<"Helper::getInfoByPid: Failed to open file\n";
+        return false;
+    }
+
+    auto content=file.readAll();
+    file.close();
+
+    QTextStream stream(content);
+    QStringList list=stream.readAll().simplified().split(' ');
+    //get process information
+    pidInfo.clear();
+    pidInfo.push_back(list[0]);  //pid
+    pidInfo.push_back(list[1]);  //comm
+    pidInfo.push_back(list[2]);  //state
+    pidInfo.push_back(list[3]);  //ppid
+    pidInfo.push_back(list[6]);  //tty
+    pidInfo.push_back(list[18]); //nice
+    pidInfo.push_back(list[13]); //utime
+    pidInfo.push_back(list[14]); //stime
+
+    return true;
+}
+
+bool Helper::getMemUsage(long int &memTotal,long int &memFree,long int &swapTotal, long int &swapFree)
+{
+    QString fileName="/proc/meminfo";
+
+    QFile file(fileName);
+    if(!file.open(QIODevice::ReadOnly)){
+        qDebug()<<"Helper::getMemUsage: Failed to open file \"/proc/meminfo\"\n";
+        return false;
+    }
+
+    auto content=file.readAll();
+    file.close();
+
+    QTextStream stream(content);
+    memTotal=memFree=swapTotal=swapFree=0;
+    while(!stream.atEnd()){
+        QString line(stream.readLine());
+        if(line.contains("MemTotal"))
+            memTotal=line.simplified().split(' ').value(1).toInt();
+        if(line.contains("MemFree"))
+            memFree=line.simplified().split(' ').value(1).toInt();
+        if(line.contains("SwapTotal"))
+            swapTotal=line.simplified().split(' ').value(1).toInt();
+        if(line.contains("SwapFree")){
+            swapFree=line.simplified().split(' ').value(1).toInt();
+            break;
+        }
+    }
+    return true;
+}
+
+bool Helper::getCpuTime(long int &total_time, long int &idleTime)
 {
     total_time=0;
-
+    idleTime=0;
     QFile qfile("/proc/stat");
-    if(qfile.open(QIODevice::ReadOnly)){
-        QString content(qfile.readLine());
-        QStringList time(content.simplified().split(' '));
-        for(auto &tmp: time)
-            total_time+=tmp.toInt();
-        qfile.close();
+    if(!qfile.open(QIODevice::ReadOnly)){
+        qDebug()<<"Helper::getCpuIime: Failed to open file\n";
+        return false;
     }
+    QString content(qfile.readLine());
+    QStringList time(content.simplified().split(' '));
+    qfile.close();
+
+    //get total cpu time and idle cpu time
+    for(int i=0;i<6;i++)
+        total_time+=time[i].toInt();
+    idleTime=time[3].toInt()+time[4].toInt();
+
     return true;
 }
 
@@ -130,11 +196,13 @@ bool Helper::getProcessInfo(QVector<QStringList> &infoVec)
             QStringList splited=line.simplified().split(" ");
             proInfo.push_back(splited[0]);  //pid
             proInfo.push_back(splited[1]);  //comm
-            proInfo.push_back(splited[2]);  //task_state
+            proInfo.push_back(splited[2]);  //state
             proInfo.push_back(splited[18]); //nice
             proInfo.push_back(splited[13]); //utime
             proInfo.push_back(splited[14]); //stime
         }
+        fs.close();
+
         filePath=dirPath+"/statm";
         fs.setFileName(filePath);
         if(fs.open(QIODevice::ReadOnly))
@@ -143,8 +211,10 @@ bool Helper::getProcessInfo(QVector<QStringList> &infoVec)
             QTextStream streamall(&allcontents);
             QString line=streamall.readAll();
             QStringList splited=line.simplified().split(" ");
-            proInfo.push_back(splited[1]);  //Resident(pages)
+            proInfo.push_back(splited[1]);  //resident set size
         }
+        fs.close();
+
         infoVec.push_back(proInfo);
     }
 

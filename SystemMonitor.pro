@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -26,11 +26,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    helper.cpp
+    helper.cpp \
+    killprocessdialog.cpp
 
 HEADERS += \
         mainwindow.h \
-    helper.h
+    helper.h \
+    killprocessdialog.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    killprocessdialog.ui
